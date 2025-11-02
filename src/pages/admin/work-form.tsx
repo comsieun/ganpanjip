@@ -7,10 +7,12 @@ const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
 // 미리 정의된 태그 리스트
 const PREDEFINED_TAGS = [
-  'ALL', '2D', '3D', 'Line Drawing Animation', 'Branding', 'Music Video', 
+  '2D', '3D', 'Line Drawing Animation', 'Branding', 'Music Video', 
   'Content Planning', 'VR', 'Cinematic', 'Graphic Design', 'Midea Art', 
   'SNS Contents', 'Character Modeling'
 ];
+
+type GridLayout = 'grid-1'|'grid-2'|'grid-3'|'grid-4';
 
 export default function WorkFormPage() {
   const [formData, setFormData] = useState<Omit<WorkData, 'id'> & { mainVideoUrl: string }>({
@@ -21,9 +23,7 @@ export default function WorkFormPage() {
     owner: '',
     tags: [],
     thumbnail: '',
-    descriptionKo: '',
-    descriptionEn: '',
-    mainVideoUrl: '', // 메인 비디오 URL 필드
+    mainVideoUrl: '', 
     data: [],
   });
 
@@ -55,7 +55,7 @@ export default function WorkFormPage() {
       type: 'text', 
       layout: 'grid-1',
       items: [],
-      text: '', // 텍스트 블록을 위해 text 필드 추가 가정
+      text: '', 
     };
     setFormData(prev => ({ ...prev, data: [...prev.data, newBlock] }));
   };
@@ -69,7 +69,6 @@ export default function WorkFormPage() {
   // 컨텐츠 블록 내 미디어 업로드 처리 함수
   const handleContentMediaUpload = (index: number, url: string) => {
     const block = formData.data[index];
-    // 'image'나 'gif' 타입에만 미디어를 추가합니다.
     if (block.type === 'image' || block.type === 'gif') {
         const newItem: MediaItem = { url, caption: '' };
         const updatedBlock = { ...block, items: [...(block.items || []), newItem] };
@@ -77,7 +76,7 @@ export default function WorkFormPage() {
     }
   };
 
-  const handleLayoutChange = (index: number, layout: 'grid-1'|'grid-2'|'grid-4') => {
+  const handleLayoutChange = (index: number, layout: GridLayout) => {
       const block = formData.data[index];
       const updatedBlock = { ...block, layout };
       updateContentBlock(index, updatedBlock);
@@ -89,7 +88,6 @@ export default function WorkFormPage() {
       const updatedBlock: ContentBlock = { 
           ...block, 
           type, 
-          // 타입 변경 시 관련 없는 필드 초기화
           items: (type === 'image' || type === 'gif') ? block.items : [],
           text: (type === 'text') ? block.text : '' 
       };
@@ -198,14 +196,6 @@ export default function WorkFormPage() {
             <ImageUploader onUploadSuccess={url => setFormData(prev => ({...prev, thumbnail: url}))} />
             {formData.thumbnail && <img src={formData.thumbnail} alt="Thumbnail preview" className={styles.previewImage} />}
         </div>
-        <div className={styles.formGroup}>
-            <label>설명글 (Ko)</label>
-            <textarea name="descriptionKo" value={formData.descriptionKo || ''} onChange={handleInputChange} className={styles.textarea}></textarea>
-        </div>
-        <div className={styles.formGroup}>
-            <label>설명글 (En)</label>
-            <textarea name="descriptionEn" value={formData.descriptionEn || ''} onChange={handleInputChange} className={styles.textarea}></textarea>
-        </div>
 
         {/* 콘텐츠 블록 */}
         <div className={styles.contentBlocks}>
@@ -236,9 +226,10 @@ export default function WorkFormPage() {
                         <>
                             <div className={styles.formGroup}>
                                 <label>그리드 레이아웃</label>
-                                <select value={block.layout} onChange={(e) => handleLayoutChange(index, e.target.value as any)} className={styles.select}>
+                                <select value={block.layout} onChange={(e) => handleLayoutChange(index, e.target.value as GridLayout)} className={styles.select}>
                                     <option value="grid-1">1개씩</option>
                                     <option value="grid-2">2개씩</option>
+                                    <option value="grid-3">3개씩</option>
                                     <option value="grid-4">4개씩</option>
                                 </select>
                             </div>
