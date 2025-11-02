@@ -10,27 +10,37 @@
   padding: 2rem 0;
 }
 
-.header {
+.mainVideoContainer {
   margin-bottom: 2rem;
-  border-bottom: 1px solid #eaeaea;
-  padding-bottom: 2rem;
+  width: 100%;
+  position: relative;
+  /* 비디오 비율 유지를 위해 padding-bottom 사용 (예: 16:9) */
+  /* padding-bottom: 56.25%; 
+  height: 0; */ 
 }
 
-.title {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
+.mainVideoPlayer {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  background-color: #000;
+}
+
+.header {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
 }
 
 .subtitle {
   font-size: 1.5rem;
-  color: #666;
-  margin-bottom: 1rem;
+  color: #000000;
+  margin-bottom: 0.5rem; /* 다른 메타 정보와의 간격 조정 */
 }
 
 .meta {
   display: flex;
   gap: 1rem;
-  color: #888;
   margin-bottom: 1rem;
 }
 
@@ -41,28 +51,19 @@
 }
 
 .tag {
-  background-color: #f0f0f0;
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  font-size: 0.9rem;
+  display: inline-block;
+  border: 1px solid #000;
+  padding: 0.2rem 0.4rem;
+  font-size: 1rem;
+  transition: background-color 0.2s, color 0.2s;
+  cursor: default; /* 클릭 기능이 없으므로 기본 커서 */
 }
 
 .content {
   line-height: 1.8;
+  padding-top: 1rem; /* header border와 내용 사이 간격 */
 }
 
-.description {
-  font-size: 1.1rem;
-  margin-bottom: 1.5rem;
-}
-
-.divider {
-  border: none;
-  border-top: 1px solid #eaeaea;
-  margin: 2rem 0;
-}
-
-/* --- 콘텐츠 블록 스타일 --- */
 .textBlock {
   font-size: 1.1rem;
   margin-bottom: 1.5rem;
@@ -81,6 +82,9 @@
 .gallery_grid-2 {
   grid-template-columns: repeat(2, 1fr);
 }
+.gallery_grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
 .gallery_grid-4 {
   grid-template-columns: repeat(4, 1fr);
 }
@@ -97,11 +101,4 @@
   color: #888;
   text-align: center;
   margin-top: 0.5rem;
-}
-
-/* 모바일 반응형 */
-@media (max-width: 600px) {
-  .gallery_grid-4 {
-    grid-template-columns: repeat(2, 1fr); /* 작은 화면에서는 4열을 2열로 변경 */
-  }
 }

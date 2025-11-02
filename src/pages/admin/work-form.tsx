@@ -13,16 +13,17 @@ const PREDEFINED_TAGS = [
 ];
 
 export default function WorkFormPage() {
-  const [formData, setFormData] = useState<Omit<WorkData, 'id'>>({
+  const [formData, setFormData] = useState<Omit<WorkData, 'id'> & { mainVideoUrl: string }>({
     title: '',
     subtitle: '',
-    date: new Date().toISOString(), // DB 저장을 위해 ISO 문자열 사용
+    date: new Date().toISOString(),
     workType: 'work',
     owner: '',
     tags: [],
     thumbnail: '',
     descriptionKo: '',
     descriptionEn: '',
+    mainVideoUrl: '', // 메인 비디오 URL 필드
     data: [],
   });
 
@@ -32,14 +33,11 @@ export default function WorkFormPage() {
   };
   
   const handleDateChange = (e: ChangeEvent<HTMLInputElement>) => {
-    // 날짜 입력(YYYY-MM-DD)을 ISO 문자열로 변환하여 저장
     setFormData(prev => ({...prev, date: new Date(e.target.value).toISOString()}));
   };
 
-  // 드롭다운에서 태그를 선택했을 때 처리하는 함수
   const handleTagSelect = (e: ChangeEvent<HTMLSelectElement>) => {
     const selectedTag = e.target.value;
-    // 선택된 태그가 유효하고, 아직 목록에 없는 경우에만 추가
     if (selectedTag && !formData.tags.includes(selectedTag)) {
       setFormData(prev => ({ ...prev, tags: [...prev.tags, selectedTag] }));
     }
@@ -54,9 +52,10 @@ export default function WorkFormPage() {
 
   const addContentBlock = () => {
     const newBlock: ContentBlock = {
-      type: 'image', // 기본 타입
-      layout: 'grid-4', // 기본 레이아웃
+      type: 'text', 
+      layout: 'grid-1',
       items: [],
+      text: '', // 텍스트 블록을 위해 text 필드 추가 가정
     };
     setFormData(prev => ({ ...prev, data: [...prev.data, newBlock] }));
   };
@@ -67,16 +66,40 @@ export default function WorkFormPage() {
     setFormData(prev => ({ ...prev, data: newData }));
   };
   
+  // 컨텐츠 블록 내 미디어 업로드 처리 함수
   const handleContentMediaUpload = (index: number, url: string) => {
     const block = formData.data[index];
-    const newItem: MediaItem = { url, caption: '' };
-    const updatedBlock = { ...block, items: [...(block.items || []), newItem] };
-    updateContentBlock(index, updatedBlock);
+    // 'image'나 'gif' 타입에만 미디어를 추가합니다.
+    if (block.type === 'image' || block.type === 'gif') {
+        const newItem: MediaItem = { url, caption: '' };
+        const updatedBlock = { ...block, items: [...(block.items || []), newItem] };
+        updateContentBlock(index, updatedBlock);
+    }
   };
-  
+
   const handleLayoutChange = (index: number, layout: 'grid-1'|'grid-2'|'grid-4') => {
       const block = formData.data[index];
       const updatedBlock = { ...block, layout };
+      updateContentBlock(index, updatedBlock);
+  };
+  
+  // 컨텐츠 블록 타입 변경 처리 함수
+  const handleTypeChange = (index: number, type: ContentBlock['type']) => {
+      const block = formData.data[index];
+      const updatedBlock: ContentBlock = { 
+          ...block, 
+          type, 
+          // 타입 변경 시 관련 없는 필드 초기화
+          items: (type === 'image' || type === 'gif') ? block.items : [],
+          text: (type === 'text') ? block.text : '' 
+      };
+      updateContentBlock(index, updatedBlock);
+  };
+  
+  // 텍스트 블록 내용 변경 처리 함수
+  const handleTextChange = (index: number, value: string) => {
+      const block = formData.data[index];
+      const updatedBlock = { ...block, text: value }; 
       updateContentBlock(index, updatedBlock);
   };
 
@@ -86,14 +109,21 @@ export default function WorkFormPage() {
         data: prev.data.filter((_, i) => i !== index)
     }));
   };
+  
+  const handleMainVideoUpload = (url: string) => {
+      setFormData(prev => ({...prev, mainVideoUrl: url}));
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    
+    const payload = { ...formData };
+    
     try {
       const response = await fetch(`${API_URL}/works`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
       });
       if(response.ok) {
           alert('게시물이 성공적으로 등록되었습니다.');
@@ -109,11 +139,25 @@ export default function WorkFormPage() {
   return (
     <div className={styles.formContainer}>
       <form onSubmit={handleSubmit} className={styles.workForm}>
-        {/* 기본 정보 */}
         <div className={styles.formGroup}>
           <label>제목</label>
           <input type="text" name="title" value={formData.title} onChange={handleInputChange} required className={styles.input} />
         </div>
+        
+        <div className={styles.formGroup}>
+            <label>메인 비디오 파일</label>
+            <ImageUploader onUploadSuccess={handleMainVideoUpload} /> 
+            {formData.mainVideoUrl && (
+                <div className={styles.previewContainer} style={{ marginTop: '10px' }}>
+                    <video
+                        src={formData.mainVideoUrl}
+                        controls
+                        style={{ width: '100%', maxWidth: '400px', height: 'auto', border: '1px solid #ccc' }} 
+                    />
+                </div>
+            )}
+        </div>
+        
         <div className={styles.formGroup}>
           <label>서브 제목</label>
           <input type="text" name="subtitle" value={formData.subtitle || ''} onChange={handleInputChange} className={styles.input} />
@@ -144,7 +188,6 @@ export default function WorkFormPage() {
           </div>
           <select onChange={handleTagSelect} value="" className={styles.select}>
             <option value="" disabled>태그를 선택하세요...</option>
-            {/* 이미 선택된 태그는 드롭다운 목록에서 제외 */}
             {PREDEFINED_TAGS.filter(tag => !formData.tags.includes(tag)).map(tag => (
                 <option key={tag} value={tag}>{tag}</option>
             ))}
@@ -170,23 +213,47 @@ export default function WorkFormPage() {
             {formData.data.map((block, index) => (
                 <div key={index} className={styles.contentBlock}>
                     <h4>Block {index + 1}</h4>
+                    
                     <div className={styles.formGroup}>
-                        <label>그리드 레이아웃</label>
-                        <select value={block.layout} onChange={(e) => handleLayoutChange(index, e.target.value as any)} className={styles.select}>
-                            <option value="grid-1">1개씩</option>
-                            <option value="grid-2">2개씩</option>
-                            <option value="grid-4">4개씩</option>
+                        <label>블록 타입</label>
+                        <select value={block.type} onChange={(e) => handleTypeChange(index, e.target.value as ContentBlock['type'])} className={styles.select}>
+                            <option value="text">텍스트</option>
+                            <option value="image">이미지</option>
+                            <option value="gif">GIF</option>
                         </select>
                     </div>
-                     <div className={styles.formGroup}>
-                        <label>미디어 파일</label>
-                        <ImageUploader onUploadSuccess={(url) => handleContentMediaUpload(index, url)} />
-                        <div className={styles.previewContainer}>
-                            {block.items?.map((item, itemIndex) => (
-                                <img key={itemIndex} src={item.url} alt={`Content media ${itemIndex}`} className={styles.previewImage} />
-                            ))}
+
+                    {/* 텍스트 입력 필드 */}
+                    {block.type === 'text' && (
+                        <div className={styles.formGroup}>
+                            <label>텍스트 내용</label>
+                            <textarea value={block.text || ''} onChange={(e) => handleTextChange(index, e.target.value)} className={styles.textarea}></textarea>
                         </div>
-                    </div>
+                    )}
+                    
+                    {/* 미디어 관련 필드 */}
+                    {(block.type === 'image' || block.type === 'gif') && (
+                        <>
+                            <div className={styles.formGroup}>
+                                <label>그리드 레이아웃</label>
+                                <select value={block.layout} onChange={(e) => handleLayoutChange(index, e.target.value as any)} className={styles.select}>
+                                    <option value="grid-1">1개씩</option>
+                                    <option value="grid-2">2개씩</option>
+                                    <option value="grid-4">4개씩</option>
+                                </select>
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label>미디어 파일</label>
+                                <ImageUploader onUploadSuccess={(url) => handleContentMediaUpload(index, url)} />
+                                <div className={styles.previewContainer}>
+                                    {block.items?.map((item, itemIndex) => (
+                                        <img key={itemIndex} src={item.url} alt={`Content media ${itemIndex}`} className={styles.previewImage} />
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                    
                     <button type="button" onClick={() => removeContentBlock(index)} className={`${styles.button} ${styles.dangerButton}`}>블록 삭제</button>
                 </div>
             ))}
@@ -198,4 +265,3 @@ export default function WorkFormPage() {
     </div>
   );
 }
-
