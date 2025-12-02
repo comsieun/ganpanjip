@@ -5,6 +5,7 @@ import Header from '../../components/common/Header';
 import Footer from '../../components/common/Footer';
 import Image from 'next/image';
 import styles from '../../styles/WorkDetail.module.css'; // 상세 페이지 전용 CSS
+import RelatedProjects from '../../components/works/Related';
 
 interface ExtendedWorkData extends WorkData {
     mainVideoUrl: string; 
@@ -137,6 +138,7 @@ const WorkDetailPage: NextPage<Props> = ({ work: workData }) => {
           })}
         </article>
       </main>
+      <RelatedProjects currentWork={work} /> 
       <Footer />
     </div>
   );

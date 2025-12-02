@@ -1,0 +1,86 @@
+.relatedSection {
+  margin: 50px auto;
+  padding: 0 20px;
+  max-width: 1200px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 10px; 
+}
+
+.title {
+  font-family: 'Pretendard', sans-serif; 
+  font-size: 22px;
+  font-weight: 500; 
+}
+
+.controls {
+  display: flex;
+  gap: 10px; 
+}
+
+.sliderContainer {
+  position: relative;
+  overflow: hidden; 
+}
+
+.cardTrackWrapper {
+  overflow: hidden;
+  width: 100%;
+}
+
+.cardTrack {
+  display: flex;
+  transition: transform 0.4s ease-in-out; 
+}
+
+.slideItem {
+  flex: 0 0 calc(100% / 3); 
+  padding: 0 10px; 
+  box-sizing: border-box;
+}
+
+.arrow {
+  background: rgba(0, 0, 0, 0.05); 
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arrow:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.arrow:disabled {
+  cursor: not-allowed;
+  opacity: 0.3; 
+  border-color: #eee;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .slideItem {
+    flex: 0 0 100%; 
+  }
+  
+  .header {
+    padding: 0 5px;
+  }
+
+  .arrow {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+}
