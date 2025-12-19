@@ -20,7 +20,7 @@ export default function AdminLoginPage() {
 
       if (res.ok) {
         // 로그인 성공 시 게시물 작성 페이지로 이동
-        router.push('/admin/work-form');
+        router.push('/admin/work-list');
       } else {
         setError('비밀번호가 올바르지 않습니다.');
       }

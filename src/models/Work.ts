@@ -1,15 +1,14 @@
-// data 필드 내부의 MediaItem에 대한 인터페이스
 export interface MediaItem {
-  url: string;
-  caption?: string; // 캡션은 선택적일 수 있음
+  url: string;      // 미리보기용 Blob URL -> 업로드 후 S3 URL로 바뀜
+  caption?: string; 
+  file?: File;    
 }
 
-// data 필드 내부의 ContentBlock에 대한 인터페이스
 export interface ContentBlock {
-  type: 'image' | 'gif' | 'video' | 'text'; // 콘텐츠 유형
-  layout?: 'grid-1' | 'grid-2' | 'grid-3' | 'grid-4'; // 레이아웃 (grid-3 추가 가정)
-  items?: MediaItem[]; // 미디어 아이템 목록 (갤러리 유형에만 사용)
-  text?: string; // 텍스트 내용 (텍스트 유형에만 사용)
+  type: 'image' | 'gif' | 'video' | 'text';
+  layout?: 'grid-1' | 'grid-2' | 'grid-3' | 'grid-4';
+  items?: MediaItem[];
+  text?: string;
 }
 
 // API로부터 받는 순수 데이터 객체의 형태를 정의하는 인터페이스

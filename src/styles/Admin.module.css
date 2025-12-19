@@ -171,3 +171,149 @@
 .submitButton:hover {
     background-color: #005bb5;
 }
+
+.listContainer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.listHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #333; 
+  padding-bottom: 15px;
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.createButton {
+  background-color: #333;
+  color: white;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.simpleListWrapper {
+  background: white;
+}
+
+.simpleTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.simpleTable th {
+  text-align: left;
+  padding: 10px;
+  font-size: 0.9rem;
+  color: #666;
+  border-bottom: 1px solid #ddd;
+}
+
+.simpleTable td {
+  padding: 15px 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.tdTitleSimple {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.emptyRow {
+  text-align: center;
+  padding: 40px !important;
+  color: #999;
+}
+
+.tdActions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.miniButton {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.miniButton:hover {
+  opacity: 0.8;
+}
+
+.editBtn {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.deleteBtn {
+  background-color: #fff1f0;
+  color: #e04646;
+}
+
+.loadingText {
+  text-align: center;
+  margin-top: 50px;
+  color: #666;
+}
+
+.blockHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.blockHeader h4 {
+    margin: 0;
+    color: #333;
+}
+
+.blockControls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.controlBtn {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #ddd;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.controlBtn:hover:not(:disabled) {
+    background-color: #e0e0e0;
+}
+
+.controlBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #eee;
+}
+
+.dangerBtn {
+    background-color: #fff1f0;
+    border-color: #ffa39e;
+    color: #e04646;
+}
+
+.dangerBtn:hover {
+    background-color: #ffccc7;
+}

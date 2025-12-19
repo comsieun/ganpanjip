@@ -1,11 +1,19 @@
-import { useState, FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import { useRouter } from 'next/router';
+import axios from 'axios';
 import styles from '../../styles/Admin.module.css';
-import { WorkData, ContentBlock, MediaItem } from '../../models/Work'; // Work 모델 import
-import ImageUploader from '../../components/admin/ImageUploader'; // ImageUploader 경로
+import { WorkData, ContentBlock, MediaItem } from '../../models/Work';
+import ImageUploader from '../../components/admin/ImageUploader';
 import { PREDEFINED_TAGS } from '../../constants/tags';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 type GridLayout = 'grid-1'|'grid-2'|'grid-3'|'grid-4';
+
+interface MainVideoState {
+    url: string;
+    file?: File;
+}
+
 const getLayoutCount = (layout: GridLayout): number => {
     switch (layout) {
         case 'grid-1': return 1;
@@ -17,6 +25,15 @@ const getLayoutCount = (layout: GridLayout): number => {
 };
 
 export default function WorkFormPage() {
+  const router = useRouter();
+  const { id } = router.query;
+  const isEditMode = Boolean(id);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [mainVideo, setMainVideo] = useState<MainVideoState>({ url: '' });
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+
   const [formData, setFormData] = useState<Omit<WorkData, 'id'> & { mainVideoUrl: string }>({
     title: '',
     subtitle: '',
@@ -31,133 +48,198 @@ export default function WorkFormPage() {
     data: [],
   });
 
+  useEffect(() => {
+    if (id && typeof id === 'string') {
+      setIsLoading(true);
+      fetch(`${API_URL}/works/${id}`)
+        .then(res => res.json())
+        .then(data => {
+            setFormData({
+                ...data,
+                date: data.date,
+                tags: data.tags || [],
+            });
+            setMainVideo({ url: data.mainVideoUrl || '' });
+        })
+        .finally(() => setIsLoading(false));
+    }
+  }, [id]);
+
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
-  
   const handleDateChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({...prev, date: new Date(e.target.value).toISOString()}));
   };
-
   const handleTagSelect = (e: ChangeEvent<HTMLSelectElement>) => {
     const selectedTag = e.target.value;
     if (selectedTag && !formData.tags.includes(selectedTag)) {
       setFormData(prev => ({ ...prev, tags: [...prev.tags, selectedTag] }));
     }
   };
-
   const removeTag = (tagToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove),
-    }));
+    setFormData(prev => ({ ...prev, tags: prev.tags.filter(tag => tag !== tagToRemove) }));
   };
 
   const addContentBlock = () => {
-    const newBlock: ContentBlock = {
-      type: 'text', 
-      layout: 'grid-1',
-      items: [],
-      text: '', 
-    };
+    const newBlock: ContentBlock = { type: 'text', layout: 'grid-1', items: [], text: '' };
     setFormData(prev => ({ ...prev, data: [...prev.data, newBlock] }));
   };
-
   const updateContentBlock = (index: number, updatedBlock: ContentBlock) => {
     const newData = [...formData.data];
     newData[index] = updatedBlock;
     setFormData(prev => ({ ...prev, data: newData }));
   };
-  
-  const handleContentMediaUpload = (index: number, url: string) => {
-    const block = formData.data[index];
-    
-    if (block.type === 'image' || block.type === 'gif') {
-        const newItem: MediaItem = { url, caption: '' };
-        const layoutCount = getLayoutCount(block.layout as GridLayout);
-        const currentItems = block.items || [];
-        
-        let updatedItems: MediaItem[] = [];
+  const removeContentBlock = (index: number) => {
+    setFormData(prev => ({ ...prev, data: prev.data.filter((_, i) => i !== index) }));
+  };
 
-        if (layoutCount === 1) {
-            // grid-1은 무조건 덮어쓰기
-            updatedItems = [newItem];
-        } else if (currentItems.length < layoutCount) {
-            // 설정된 그리드 개수보다 작으면 추가
-            updatedItems = [...currentItems, newItem];
-        } else {
-            // 그리드 개수를 초과하면 경고 후 마지막 아이템 덮어쓰기
-            alert(`이미 ${layoutCount}개의 미디어가 등록되었습니다. 기존 미디어를 덮어씁니다.`);
-            updatedItems = [...currentItems.slice(0, layoutCount - 1), newItem];
-        }
-
-        const updatedBlock = { ...block, items: updatedItems };
-        updateContentBlock(index, updatedBlock);
+  const moveContentBlock = (index: number, direction: 'up' | 'down') => {
+    const newData = [...formData.data];
+    if (direction === 'up') {
+        if (index === 0) return; 
+        [newData[index - 1], newData[index]] = [newData[index], newData[index - 1]];
+    } else {
+        if (index === newData.length - 1) return;
+        [newData[index], newData[index + 1]] = [newData[index + 1], newData[index]];
     }
+    setFormData(prev => ({ ...prev, data: newData }));
   };
 
   const handleLayoutChange = (index: number, layout: GridLayout) => {
       const block = formData.data[index];
       const layoutCount = getLayoutCount(layout);
       const updatedItems = (block.items || []).slice(0, layoutCount);
-
       const updatedBlock = { ...block, layout, items: updatedItems };
       updateContentBlock(index, updatedBlock);
   };
-  
   const handleTypeChange = (index: number, type: ContentBlock['type']) => {
       const block = formData.data[index];
       const updatedBlock: ContentBlock = { 
-          ...block, 
-          type, 
-          items: (type === 'image' || type === 'gif') ? block.items : [],
+          ...block, type, 
+          items: (type === 'image' || type === 'gif' || type === 'video') ? block.items : [],
           text: (type === 'text') ? block.text : '' 
       };
       updateContentBlock(index, updatedBlock);
   };
-  
   const handleTextChange = (index: number, value: string) => {
       const block = formData.data[index];
       const updatedBlock = { ...block, text: value }; 
       updateContentBlock(index, updatedBlock);
   };
 
-  const removeContentBlock = (index: number) => {
-    setFormData(prev => ({
-        ...prev,
-        data: prev.data.filter((_, i) => i !== index)
-    }));
+  const handleMainVideoSelect = (file: File) => {
+      const previewUrl = URL.createObjectURL(file);
+      setMainVideo({ url: previewUrl, file: file });
   };
-  
-  const handleMainVideoUpload = (url: string) => {
-      setFormData(prev => ({...prev, mainVideoUrl: url}));
+  const handleThumbnailSelect = (file: File) => {
+      const previewUrl = URL.createObjectURL(file);
+      setFormData(prev => ({ ...prev, thumbnail: previewUrl }));
+      setThumbnailFile(file);
+  };
+  const handleContentMediaSelect = (index: number, file: File) => {
+    const block = formData.data[index];
+    const previewUrl = URL.createObjectURL(file);
+    const newItem: MediaItem = { url: previewUrl, caption: '', file: file };
+    const layoutCount = getLayoutCount(block.layout as GridLayout);
+    const currentItems = block.items || [];
+    let updatedItems: MediaItem[] = [];
+
+    if (layoutCount === 1) {
+        updatedItems = [newItem];
+    } else if (currentItems.length < layoutCount) {
+        updatedItems = [...currentItems, newItem];
+    } else {
+        alert(`이미 ${layoutCount}개의 미디어가 등록되었습니다. 기존 미디어를 덮어씁니다.`);
+        updatedItems = [...currentItems.slice(0, layoutCount - 1), newItem];
+    }
+    updateContentBlock(index, { ...block, items: updatedItems });
+  };
+
+  const uploadFileToS3 = async (file: File): Promise<string> => {
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+      const res = await axios.post(`${API_URL}/upload`, uploadData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return res.data.url;
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
-    const payload = { ...formData };
-    
+    setIsUploading(true);
+
     try {
-      const response = await fetch(`${API_URL}/works`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-      });
-      if(response.ok) {
-          alert('게시물이 성공적으로 등록되었습니다.');
-      } else {
-          throw new Error('서버에서 오류가 발생했습니다.');
-      }
+        let finalThumbnailUrl = formData.thumbnail;
+        if (thumbnailFile) {
+            finalThumbnailUrl = await uploadFileToS3(thumbnailFile);
+        }
+
+        let finalMainVideoUrl = mainVideo.url;
+        if (mainVideo.file) {
+            finalMainVideoUrl = await uploadFileToS3(mainVideo.file);
+        }
+
+        const finalData = await Promise.all(formData.data.map(async (block) => {
+            if (!block.items || block.items.length === 0) return block;
+            const newItems = await Promise.all(block.items.map(async (item) => {
+                if (item.file) {
+                    const s3Url = await uploadFileToS3(item.file);
+                    return { ...item, url: s3Url, file: undefined }; 
+                }
+                return item;
+            }));
+            return { ...block, items: newItems };
+        }));
+
+        const payload = {
+            ...formData,
+            thumbnail: finalThumbnailUrl,
+            mainVideoUrl: finalMainVideoUrl,
+            data: finalData
+        };
+
+        const method = isEditMode ? 'PUT' : 'POST'; 
+        const url = isEditMode ? `${API_URL}/works/${id}` : `${API_URL}/works`;
+
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if(response.ok) {
+            alert(isEditMode ? '수정되었습니다.' : '등록되었습니다.');
+            router.push('/admin/work-list');
+        } else {
+            throw new Error('서버 오류');
+        }
+
     } catch (error) {
-        console.error('Failed to submit work:', error);
-        alert('게시물 등록에 실패했습니다.');
+        console.error('Submit failed:', error);
+        alert('업로드 및 저장 중 오류가 발생했습니다.');
+    } finally {
+        setIsUploading(false);
     }
   };
+
+  if (isLoading) return <div className={styles.loadingText}>데이터 불러오는 중...</div>;
   
   return (
     <div className={styles.formContainer}>
+      {isUploading && (
+          <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+              display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontSize: '1.5rem'
+          }}>
+              파일 업로드 및 저장 중입니다... 잠시만 기다려주세요.
+          </div>
+      )}
+
+      <h2 style={{marginBottom: '20px'}}>{isEditMode ? '게시물 수정' : '새 게시물 작성'}</h2>
+      
       <form onSubmit={handleSubmit} className={styles.workForm}>
         <div className={styles.formGroup}>
           <label>제목: 썸네일 제목</label>
@@ -166,25 +248,20 @@ export default function WorkFormPage() {
         
         <div className={styles.formGroup}>
             <label>메인 비디오 파일</label>
-            <ImageUploader onUploadSuccess={handleMainVideoUpload} /> 
-            {formData.mainVideoUrl && (
+            <ImageUploader onFileSelect={handleMainVideoSelect} /> 
+            {mainVideo.url && (
                 <div className={styles.previewContainer} style={{ marginTop: '10px' }}>
-                    <video
-                        src={formData.mainVideoUrl}
-                        controls
-                        style={{ width: '100%', maxWidth: '400px', height: 'auto', border: '1px solid #ccc' }} 
-                    />
+                    <video src={mainVideo.url} controls style={{ width: '100%', maxWidth: '400px' }} />
                 </div>
             )}
         </div>
-        
         <div className={styles.formGroup}>
           <label>서브 제목: 게시물 클릭 시 보여짐</label>
           <input type="text" name="subtitle" value={formData.subtitle || ''} onChange={handleInputChange} className={styles.input} />
         </div>
         <div className={styles.formGroup}>
           <label>날짜</label>
-          <input type="date" name="date" value={formData.date.split('T')[0]} onChange={handleDateChange} required className={styles.input} />
+          <input type="date" name="date" value={formData.date ? formData.date.split('T')[0] : ''} onChange={handleDateChange} required className={styles.input} />
         </div>
         <div className={styles.formGroup}>
             <label>작품 타입</label>
@@ -198,27 +275,22 @@ export default function WorkFormPage() {
           <input type="text" name="owner" value={formData.owner} onChange={handleInputChange} required className={styles.input} />
         </div>
         <div className={styles.formGroup}>
-          <label>태그 선택</label>
+          <label>태그</label>
           <div className={styles.tagContainer}>
             {formData.tags.map(tag => (
-              <span key={tag} className={styles.tag}>
-                {tag} <button type="button" onClick={() => removeTag(tag)}>x</button>
-              </span>
+              <span key={tag} className={styles.tag}>{tag} <button type="button" onClick={() => removeTag(tag)}>x</button></span>
             ))}
           </div>
           <select onChange={handleTagSelect} value="" className={styles.select}>
-            <option value="" disabled>태그를 선택하세요...</option>
-            {PREDEFINED_TAGS.filter(tag => !formData.tags.includes(tag)).map(tag => (
-                <option key={tag} value={tag}>{tag}</option>
-            ))}
+            <option value="" disabled>태그 선택...</option>
+            {PREDEFINED_TAGS.filter(tag => !formData.tags.includes(tag)).map(tag => (<option key={tag} value={tag}>{tag}</option>))}
           </select>
         </div>
         <div className={styles.formGroup}>
             <label>썸네일</label>
-            <ImageUploader onUploadSuccess={url => setFormData(prev => ({...prev, thumbnail: url}))} />
+            <ImageUploader onFileSelect={handleThumbnailSelect} />
             {formData.thumbnail && <img src={formData.thumbnail} alt="Thumbnail preview" className={styles.previewImage} />}
         </div>
-
         <div className={styles.formGroup}>
             <label>설명글 (Ko)</label>
             <textarea name="descriptionKo" value={formData.descriptionKo || ''} onChange={handleInputChange} className={styles.textarea}></textarea>
@@ -228,12 +300,38 @@ export default function WorkFormPage() {
             <textarea name="descriptionEn" value={formData.descriptionEn || ''} onChange={handleInputChange} className={styles.textarea}></textarea>
         </div>
 
-        {/* 콘텐츠 블록 */}
         <div className={styles.contentBlocks}>
             <h2>콘텐츠 블록</h2>
             {formData.data.map((block, index) => (
                 <div key={index} className={styles.contentBlock}>
-                    <h4>Block {index + 1}</h4>
+                    <div className={styles.blockHeader}>
+                        <h4>Block {index + 1}</h4>
+                        <div className={styles.blockControls}>
+                            <button 
+                                type="button" 
+                                onClick={() => moveContentBlock(index, 'up')} 
+                                disabled={index === 0}
+                                className={styles.controlBtn}
+                            >
+                                ▲ 위로
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => moveContentBlock(index, 'down')} 
+                                disabled={index === formData.data.length - 1}
+                                className={styles.controlBtn}
+                            >
+                                ▼ 아래로
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => removeContentBlock(index)} 
+                                className={`${styles.controlBtn} ${styles.dangerBtn}`}
+                            >
+                                삭제
+                            </button>
+                        </div>
+                    </div>
                     
                     <div className={styles.formGroup}>
                         <label>블록 타입</label>
@@ -241,10 +339,10 @@ export default function WorkFormPage() {
                             <option value="text">텍스트</option>
                             <option value="image">이미지</option>
                             <option value="gif">GIF</option>
+                            <option value="video">비디오</option>
                         </select>
                     </div>
 
-                    {/* 텍스트 입력 필드 */}
                     {block.type === 'text' && (
                         <div className={styles.formGroup}>
                             <label>텍스트 내용</label>
@@ -252,8 +350,7 @@ export default function WorkFormPage() {
                         </div>
                     )}
                     
-                    {/* 미디어 관련 필드 */}
-                    {(block.type === 'image' || block.type === 'gif') && (
+                    {(block.type === 'image' || block.type === 'gif' || block.type === 'video') && (
                         <>
                             <div className={styles.formGroup}>
                                 <label>그리드 레이아웃</label>
@@ -264,35 +361,43 @@ export default function WorkFormPage() {
                                     <option value="grid-4">4개씩</option>
                                 </select>
                             </div>
-                            <p style={{fontSize: '0.9em', color: '#666', marginBottom: '10px'}}>
-                                현재 등록된 파일: {(block.items || []).length} / {getLayoutCount(block.layout as GridLayout)}개
-                                {(block.items || []).length === getLayoutCount(block.layout as GridLayout) && 
-                                    <span style={{color: 'green', marginLeft: '10px'}}> (가득 참)</span>
-                                }
-                            </p>
 
                             <div className={styles.formGroup}>
-                                <label>미디어 파일</label>
-                                <ImageUploader onUploadSuccess={(url) => handleContentMediaUpload(index, url)} />
+                                <label>미디어 파일 ({block.type === 'video' ? '영상' : '이미지'})</label>
+                                <ImageUploader onFileSelect={(file) => handleContentMediaSelect(index, file)} />
                                 <div className={styles.previewContainer}>
                                     {block.items?.map((item, itemIndex) => (
-                                        // itemIndex와 block.layout을 사용하여 레이아웃 결정 (CSS에서 처리되지만, 여기서도 확인 가능)
                                         <div key={itemIndex} style={{ display: 'inline-block', width: 'auto', margin: '5px' }}>
-                                            <img src={item.url} alt={`Content media ${itemIndex}`} className={styles.previewImage} style={{ maxWidth: '100px', height: 'auto' }} />
+                                            {block.type === 'video' ? (
+                                                <video 
+                                                    src={item.url} 
+                                                    controls 
+                                                    className={styles.previewImage}
+                                                    style={{ maxWidth: '200px', maxHeight: '150px' }} 
+                                                />
+                                            ) : (
+                                                <img 
+                                                    src={item.url} 
+                                                    alt={`Content media ${itemIndex}`} 
+                                                    className={styles.previewImage} 
+                                                    style={{ maxWidth: '100px', height: 'auto' }} 
+                                                />
+                                            )}
+                                            {item.file && <span style={{display:'block', fontSize:'0.8em', color:'blue'}}>* 저장 시 업로드됨</span>}
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         </>
                     )}
-                    
-                    <button type="button" onClick={() => removeContentBlock(index)} className={`${styles.button} ${styles.dangerButton}`}>블록 삭제</button>
                 </div>
             ))}
-            <button type="button" onClick={addContentBlock} className={styles.button}>콘텐츠 블록 추가</button>
+            <button type="button" onClick={addContentBlock} className={styles.button}>+ 콘텐츠 블록 추가</button>
         </div>
 
-        <button type="submit" className={`${styles.button} ${styles.submitButton}`}>게시물 저장</button>
+        <button type="submit" className={`${styles.button} ${styles.submitButton}`}>
+            {isEditMode ? '게시물 수정 저장' : '게시물 등록'}
+        </button>
       </form>
     </div>
   );
