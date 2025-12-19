@@ -31,7 +31,9 @@ const HomePage: NextPage<Props> = ({ works: worksData }) => {
   const selectedTags = Array.isArray(tag) ? tag : (tag ? [tag] : []);
   
   // WorkData를 Work 클래스 인스턴스로 변환
-  const allWorks = worksData.map(data => new Work(data));
+  const allWorks = worksData
+    .map(data => new Work(data))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   // 표시할 작품 필터링
   const filteredWorks = allWorks.filter(work => {

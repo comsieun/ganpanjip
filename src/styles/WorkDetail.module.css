@@ -66,6 +66,8 @@
 .textBlock {
   font-size: 1.1rem;
   margin-bottom: 1.5rem;
+  text-align: center;  
+  white-space: pre-wrap;
 }
 
 .divider {
@@ -77,10 +79,10 @@
 }
 
 .gallery {
-  display: grid;
+  display: grid; 
+  width: 100%;   
   gap: 10px;
   margin-bottom: 10px;
-  display: inline-grid;
 }
 
 .gallery_grid-1 {
