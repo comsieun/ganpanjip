@@ -23,22 +23,25 @@ const RenderContentBlock = ({ block }: { block: ContentBlock }) => {
 
     case 'image':
     case 'gif':
-      // image, gif 블록 렌더링
       const galleryClassName = `${styles.gallery} ${styles[`gallery_${block.layout}`] || ''}`;
       return (
         <div className={galleryClassName}>
-          {block.items?.map((item, index) => (
+          {block.items?.map((item, index) => {
+            const isGif = item.url.toLowerCase().endsWith('.gif');
+            return (            
             <div key={index} className={styles.mediaItem}>
               <Image
                 src={item.url}
                 alt={item.caption || `Work content ${index + 1}`}
                 width={800}
                 height={100} // 높이는 자동 조정되도록 설정
-                style={{ width: '100%', height: 'auto' }} // 반응형 스타일
+                style={{ width: '100%', height: 'auto' }}
+                unoptimized={isGif} 
               />
               {item.caption && <p className={styles.caption}>{item.caption}</p>}
             </div>
-          ))}
+            );
+          })}
         </div>
       );
     
