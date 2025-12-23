@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   reactStrictMode: true,
-    images: {
+
+  images: {
     remotePatterns: [
       {
         protocol: 'https',
@@ -13,5 +13,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${process.env.EC2_API_URL}/api/:path*`, // 
+      },
+    ];
+  },
 };
-module.exports = nextConfig;
+
+export default nextConfig;
